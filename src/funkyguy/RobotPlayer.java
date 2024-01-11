@@ -34,12 +34,14 @@ public strictfp class RobotPlayer {
         }
         while (true) {
             try {
-                if (!rc.isSpawned()) trySpawn(rc);
-                else {
+                if (rc.isSpawned()) {
                     int round = rc.getRoundNum();
                     if (round <= GameConstants.SETUP_ROUNDS)SetupPhase.runSetup(rc);
                     else MainPhase.runMainPhase(rc);
                     updateEnemyRobots(rc);
+                }
+                else {
+                    trySpawn(rc);
                 }
 
             } catch (GameActionException e) {
@@ -60,7 +62,6 @@ public strictfp class RobotPlayer {
         // use the largest possible value.
         RobotInfo[] enemyRobots = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         if (enemyRobots.length != 0){
-            rc.setIndicatorString("There are nearby enemy robots! Scary!");
             // Save an array of locations with enemy robots in them for future use.
             MapLocation[] enemyLocations = new MapLocation[enemyRobots.length];
             for (int i = 0; i < enemyRobots.length; i++){

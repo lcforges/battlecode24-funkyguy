@@ -4,10 +4,14 @@ import battlecode.common.*;
 
 public class Pathfind {
     static Direction direction;
+    int lefts;
+    int rights;
 
     public static void moveTowards(RobotController rc, MapLocation loc) throws GameActionException {
         // moves towards location and fill in water along the way
         Direction dir = rc.getLocation().directionTo(loc);
+        Direction inDir = dir;
+
         if (rc.canMove(dir)) {
             rc.move(dir);
         }
@@ -15,10 +19,24 @@ public class Pathfind {
                 rc.fill(rc.getLocation().add(dir));
         }
         else {
-            // choose new direction randomly if non-water obstacle
-            Direction randomDir = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
-            if (rc.canMove(randomDir)) {
-                rc.move(randomDir);
+            // Go clockwise around a wall
+            int dirIndex = 0;
+            for (int i = 0; i < 8; i++){
+                if (RobotPlayer.directions[i] == dir) {
+                    dirIndex = i;
+                    break;
+                }
+            }
+            while (rc.senseMapInfo(rc.getLocation().add(dir)).isWall() && rc.isMovementReady()) {
+                dir = Direction.allDirections()[(dirIndex+1)%8];
+                dirIndex++;
+            }
+            if (rc.canMove(dir)) {
+                rc.setIndicatorString("Moving "+dir+" Instead of "+inDir);
+                rc.move(dir);
+            }
+            else {
+                Pathfind.explore(rc);
             }
         }
     }
