@@ -2,10 +2,12 @@ package funkyguy;
 
 import battlecode.common.*;
 
-import java.util.Random;
+import java.util.*;
 
 public strictfp class RobotPlayer {
     public static Random rng = null;
+
+    public static int SETUP_SPAWN = 50;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -77,11 +79,25 @@ public strictfp class RobotPlayer {
 
     public static void trySpawn(RobotController rc) throws GameActionException{
         MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-        for (MapLocation loc : spawnLocs) {
-            if (rc.canSpawn(loc)) {
-                rc.spawn(loc);
-                break;
+        if (rc.getRoundNum() < SETUP_SPAWN){
+            for (MapLocation loc : spawnLocs) {
+                if (rc.canSpawn(loc)) {
+                    rc.spawn(loc);
+                    break;
+                }
             }
         }
+        else {
+            List<MapLocation> queueSpawns = new ArrayList<MapLocation>(Arrays.asList(spawnLocs));
+            while (!queueSpawns.isEmpty()) {
+                MapLocation loc = queueSpawns.get(rng.nextInt(queueSpawns.size()));
+                if (rc.canSpawn(loc)) {
+                    rc.spawn(loc);
+                    break;
+                }
+                queueSpawns.remove(loc);
+            }
+        }
+
     }
 }

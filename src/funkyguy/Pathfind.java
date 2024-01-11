@@ -19,24 +19,24 @@ public class Pathfind {
                 rc.fill(rc.getLocation().add(dir));
         }
         else {
-            // Go clockwise around a wall
+            // Go around wall
             int dirIndex = 0;
-            for (int i = 0; i < 8; i++){
+            for (int i = 0; i < 8; i++) {
                 if (RobotPlayer.directions[i] == dir) {
                     dirIndex = i;
                     break;
                 }
             }
-            while (rc.senseMapInfo(rc.getLocation().add(dir)).isWall() && rc.isMovementReady()) {
+            for (int i = 0; i < 8; i++) {
                 dir = Direction.allDirections()[(dirIndex+1)%8];
+                if (rc.isMovementReady() && rc.canMove(dir)) {
+                    rc.move(dir);
+                }
                 dirIndex++;
             }
             if (rc.canMove(dir)) {
-                rc.setIndicatorString("Moving "+dir+" Instead of "+inDir);
+                System.out.println("Moving "+dir+" Instead of "+inDir);
                 rc.move(dir);
-            }
-            else {
-                Pathfind.explore(rc);
             }
         }
     }
