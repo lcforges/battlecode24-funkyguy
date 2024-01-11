@@ -1,4 +1,4 @@
-package testplayer;
+package funkyguy;
 
 public class Test {
     public static void main(String[] args){
