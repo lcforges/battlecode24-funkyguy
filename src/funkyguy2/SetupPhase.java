@@ -1,6 +1,9 @@
-package funkyguy;
+package funkyguy2;
 
-import battlecode.common.*;
+import battlecode.common.FlagInfo;
+import battlecode.common.GameActionException;
+import battlecode.common.RobotController;
+import battlecode.common.TrapType;
 
 
 public class SetupPhase {

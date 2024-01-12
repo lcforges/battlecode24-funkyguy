@@ -1,10 +1,9 @@
-package funkyguy;
+package funkyguy2;
 
 import battlecode.common.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 public class MainPhase {
