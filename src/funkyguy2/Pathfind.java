@@ -13,7 +13,6 @@ public class Pathfind {
     public static void moveTowards(RobotController rc, MapLocation loc) throws GameActionException {
         // moves towards location and fill in water along the way
         Direction dir = rc.getLocation().directionTo(loc);
-        Direction inDir = dir;
 
         if (rc.canMove(dir)) {
             rc.move(dir);
@@ -30,16 +29,14 @@ public class Pathfind {
                     break;
                 }
             }
-            for (int i = 0; i < 8; i++) {
-                dir = Direction.allDirections()[(dirIndex+1)%8];
-                if (rc.isMovementReady() && rc.canMove(dir)) {
-                    rc.move(dir);
-                }
-                dirIndex++;
-            }
+            dir = RobotPlayer.directions[(dirIndex+1)%8];
             if (rc.canMove(dir)) {
-                System.out.println("Moving "+dir+" Instead of "+inDir);
                 rc.move(dir);
+            }
+            else {
+                // try to move randomly
+                direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
+                if (rc.canMove(direction)) rc.move(direction);
             }
         }
     }

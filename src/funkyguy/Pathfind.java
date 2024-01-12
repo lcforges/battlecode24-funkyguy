@@ -10,7 +10,6 @@ public class Pathfind {
     public static void moveTowards(RobotController rc, MapLocation loc) throws GameActionException {
         // moves towards location and fill in water along the way
         Direction dir = rc.getLocation().directionTo(loc);
-        Direction inDir = dir;
 
         if (rc.canMove(dir)) {
             rc.move(dir);
@@ -18,7 +17,7 @@ public class Pathfind {
         else if (rc.canFill(rc.getLocation().add(dir))) {
                 rc.fill(rc.getLocation().add(dir));
         }
-        else {
+        else if (!rc.sensePassability(rc.getLocation().add(dir))) {
             // Go around wall
             int dirIndex = 0;
             for (int i = 0; i < 8; i++) {
@@ -28,16 +27,17 @@ public class Pathfind {
                 }
             }
             for (int i = 0; i < 8; i++) {
-                dir = Direction.allDirections()[(dirIndex+1)%8];
+                dir = RobotPlayer.directions[(dirIndex+1)%8];
                 if (rc.isMovementReady() && rc.canMove(dir)) {
                     rc.move(dir);
                 }
                 dirIndex++;
             }
-            if (rc.canMove(dir)) {
-                System.out.println("Moving "+dir+" Instead of "+inDir);
-                rc.move(dir);
-            }
+        }
+        else {
+            //move randomly
+            direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
+            if (rc.canMove(direction)) rc.move(direction);
         }
     }
 
