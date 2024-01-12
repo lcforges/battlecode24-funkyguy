@@ -20,7 +20,7 @@ public class Pathfind {
         else if (rc.canFill(rc.getLocation().add(dir))) {
                 rc.fill(rc.getLocation().add(dir));
         }
-        else {
+        else if (!rc.sensePassability(rc.getLocation().add(dir))) {
             // Go around wall
             int dirIndex = 0;
             for (int i = 0; i < 8; i++) {
@@ -29,15 +29,18 @@ public class Pathfind {
                     break;
                 }
             }
-            dir = RobotPlayer.directions[(dirIndex+1)%8];
-            if (rc.canMove(dir)) {
-                rc.move(dir);
+            for (int i = 0; i < 8; i++) {
+                dir = RobotPlayer.directions[(dirIndex+1)%8];
+                if (rc.isMovementReady() && rc.canMove(dir)) {
+                    rc.move(dir);
+                }
+                dirIndex++;
             }
-            else {
-                // try to move randomly
-                direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
-                if (rc.canMove(direction)) rc.move(direction);
-            }
+        }
+        else {
+            //move randomly
+            direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
+            if (rc.canMove(direction)) rc.move(direction);
         }
     }
 

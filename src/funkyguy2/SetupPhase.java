@@ -27,10 +27,12 @@ public class SetupPhase {
 
             if (target != null) {
                 Pathfind.moveTowards(rc, target.getLocation());
-                if (rc.getLocation().distanceSquaredTo(target.getLocation()) < 4){
-                    if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                        rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-                    }
+                int dist = rc.getLocation().distanceSquaredTo(target.getLocation());
+                if (dist < 4 && dist > 0){
+                    if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+                }
+                else if (dist == 0){
+                    if (rc.canBuild(TrapType.STUN, rc.getLocation())) rc.build(TrapType.STUN, rc.getLocation());
                 }
             }
             else {

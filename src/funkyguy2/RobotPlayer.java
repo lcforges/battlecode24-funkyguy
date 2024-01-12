@@ -7,10 +7,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+
 public strictfp class RobotPlayer {
     public static Random rng = null;
 
     public static int SETUP_SPAWN = 50;
+
+    public static final int MAX_HEALTH = 1000;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
