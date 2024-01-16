@@ -11,6 +11,8 @@ import java.util.Random;
 public strictfp class RobotPlayer {
     public static Random rng = null;
 
+    public static boolean spawnDuck = false;
+
     public static int SETUP_SPAWN = 50;
 
     public static final int MAX_HEALTH = 1000;

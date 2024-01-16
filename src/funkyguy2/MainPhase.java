@@ -2,10 +2,7 @@ package funkyguy2;
 
 import battlecode.common.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.PriorityQueue;
+import java.util.*;
 
 public class MainPhase {
 
@@ -15,6 +12,63 @@ public class MainPhase {
         if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
         if (rc.canBuyGlobal(GlobalUpgrade.HEALING)) rc.buyGlobal(GlobalUpgrade.HEALING);
 
+        if (!RobotPlayer.spawnDuck) {
+            attackEnemies(rc);
+
+            healAllies(rc);
+
+            captureTheFlag(rc);
+        }
+        else {
+            SetupPhase.trapSpawn(rc);
+        }
+
+
+    }
+
+    private static void healAllies(RobotController rc) throws GameActionException {
+        class Tuple implements Comparable<Tuple> {
+            final int health;
+            final RobotInfo robot;
+
+            public Tuple(int health, RobotInfo robot) throws GameActionException {
+                this.health = health;
+                this.robot = robot;
+            }
+
+            @Override
+            public int compareTo(Tuple tup) {
+                return this.health - tup.health;
+            }
+        }
+        // heals flag holders and then weakest units
+        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
+        if (allies.length != 0) {
+            for (RobotInfo ally : allies) {
+                if (ally.hasFlag()){
+                    if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
+                    else {
+                        Pathfind.moveTowards(rc, ally.getLocation());
+                        if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
+                    }
+                }
+            }
+            PriorityQueue<Tuple> healths = new PriorityQueue<>();
+            for (RobotInfo ally : allies) {
+                healths.add(new Tuple(ally.getHealth(),ally));
+            }
+            MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
+            if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
+            else {
+                while (!healths.isEmpty()){
+                    lowestHealthLoc = healths.remove().robot.getLocation();
+                    if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
+                }
+            }
+        }
+    }
+
+    private static void attackEnemies(RobotController rc) throws GameActionException {
         // attack enemy robots with flags first
         RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         for (RobotInfo robot: nearbyEnemies) {
@@ -31,11 +85,9 @@ public class MainPhase {
                 rc.attack(robot.getLocation());
             }
         }
+    }
 
-        // heal nearby ducks
-        healAllies(rc);
-
-        // MOVEMENT
+    private static void captureTheFlag(RobotController rc) throws GameActionException {
         if (!rc.hasFlag()) {
             // move towards closest flag
             ArrayList<MapLocation> flagLocs = new ArrayList<>();
@@ -81,48 +133,6 @@ public class MainPhase {
             MapLocation[] spawnLocs = rc.getAllySpawnLocations();
             MapLocation closestSpawn = findClosestLocation(rc.getLocation(), Arrays.asList(spawnLocs));
             Pathfind.moveTowards(rc, closestSpawn);
-        }
-    }
-
-    private static void healAllies(RobotController rc) throws GameActionException {
-        class Tuple implements Comparable<Tuple> {
-            final int health;
-            final RobotInfo robot;
-
-            public Tuple(int health, RobotInfo robot) throws GameActionException {
-                this.health = health;
-                this.robot = robot;
-            }
-
-            @Override
-            public int compareTo(Tuple tup) {
-                return this.health - tup.health;
-            }
-        }
-        // heals flag holders and then weakest units
-        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
-        if (allies.length != 0) {
-            for (RobotInfo ally : allies) {
-                if (ally.hasFlag()){
-                    if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
-                    else {
-                        Pathfind.moveTowards(rc, ally.getLocation());
-                        if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
-                    }
-                }
-            }
-            PriorityQueue<Tuple> healths = new PriorityQueue<>();
-            for (RobotInfo ally : allies) {
-                healths.add(new Tuple(ally.getHealth(),ally));
-            }
-            MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
-            if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
-            else {
-                while (!healths.isEmpty()){
-                    lowestHealthLoc = healths.remove().robot.getLocation();
-                    if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
-                }
-            }
         }
     }
 
