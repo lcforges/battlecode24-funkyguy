@@ -37,8 +37,8 @@ public class MainPhase {
                     flagLocs.add(flag.getLocation());
                 }
                 else {
-                    // follow picked up enemy flag 50% of time
-                    if (RobotPlayer.rng.nextInt(2) == 1) {
+                    // follow picked up enemy flag x% of time
+                    if (RobotPlayer.rng.nextInt(100) >= 50) {
                         flagLocs.add(flag.getLocation());
                     }
                 }

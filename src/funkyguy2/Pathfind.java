@@ -51,8 +51,15 @@ public class Pathfind {
             moveTowards(rc, nearbyCrumbs[0]);
         }
         if (rc.isMovementReady()) {
-            if (direction != null && rc.canMove(direction)) {
-                rc.move(direction);
+            if (direction != null) {
+                if (rc.canMove(direction)) rc.move(direction);
+                else if (rc.canFill(rc.getLocation().add(direction)) && RobotPlayer.rng.nextBoolean()) {
+                    rc.fill(rc.getLocation().add(direction));
+                }
+                else {
+                    direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
+                    if (rc.canMove(direction)) rc.move(direction);
+                }
             }
             else {
                 direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];

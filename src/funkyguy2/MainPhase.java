@@ -15,7 +15,7 @@ public class MainPhase {
         if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
         if (rc.canBuyGlobal(GlobalUpgrade.HEALING)) rc.buyGlobal(GlobalUpgrade.HEALING);
 
-        // attack enemy robots with flags
+        // attack enemy robots with flags first
         RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         for (RobotInfo robot: nearbyEnemies) {
             if (robot.hasFlag() && !rc.hasFlag()) {
@@ -24,7 +24,12 @@ public class MainPhase {
             }
         }
         for (RobotInfo robot: nearbyEnemies) {
-            if (rc.canAttack(robot.getLocation()) && !rc.hasFlag()) rc.attack(robot.getLocation());
+            if (!rc.hasFlag()) {
+                Pathfind.moveTowards(rc, robot.getLocation());
+            }
+            if (rc.canAttack(robot.getLocation()) && !rc.hasFlag()) {
+                rc.attack(robot.getLocation());
+            }
         }
 
         // heal nearby ducks
@@ -40,8 +45,8 @@ public class MainPhase {
                     flagLocs.add(flag.getLocation());
                 }
                 else {
-                    // follow picked up enemy flag 50% of time
-                    if (RobotPlayer.rng.nextInt(2) == 1) {
+                    // follow picked up enemy flag x% of time
+                    if (RobotPlayer.rng.nextInt(100) >= 30) {
                         flagLocs.add(flag.getLocation());
                     }
                 }
@@ -95,11 +100,15 @@ public class MainPhase {
             }
         }
         // heals flag holders and then weakest units
-        RobotInfo[] allies = rc.senseNearbyRobots(7, rc.getTeam());
+        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
         if (allies.length != 0) {
             for (RobotInfo ally : allies) {
-                if (rc.canHeal(ally.getLocation()) && ally.hasFlag()) {
-                    rc.heal(ally.getLocation());
+                if (ally.hasFlag()){
+                    if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
+                    else {
+                        Pathfind.moveTowards(rc, ally.getLocation());
+                        if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
+                    }
                 }
             }
             PriorityQueue<Tuple> healths = new PriorityQueue<>();
