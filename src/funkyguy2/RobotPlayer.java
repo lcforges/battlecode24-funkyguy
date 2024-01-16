@@ -12,6 +12,7 @@ public strictfp class RobotPlayer {
     public static Random rng = null;
 
     public static boolean spawnDuck = false;
+    public static MapLocation mainSpawnLoc = null;
 
     public static int SETUP_SPAWN = 50;
 
@@ -86,26 +87,32 @@ public strictfp class RobotPlayer {
     }
 
     public static void trySpawn(RobotController rc) throws GameActionException{
-        MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-        if (rc.getRoundNum() < SETUP_SPAWN){
-            for (MapLocation loc : spawnLocs) {
-                if (rc.canSpawn(loc)) {
-                    rc.spawn(loc);
-                    break;
-                }
+        if (spawnDuck && mainSpawnLoc != null){
+            if (rc.canSpawn(mainSpawnLoc)) {
+                rc.spawn(mainSpawnLoc);
             }
         }
         else {
-            List<MapLocation> queueSpawns = new ArrayList<MapLocation>(Arrays.asList(spawnLocs));
-            while (!queueSpawns.isEmpty()) {
-                MapLocation loc = queueSpawns.get(rng.nextInt(queueSpawns.size()));
-                if (rc.canSpawn(loc)) {
-                    rc.spawn(loc);
-                    break;
+            MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+            if (rc.getRoundNum() < SETUP_SPAWN){
+                for (MapLocation loc : spawnLocs) {
+                    if (rc.canSpawn(loc)) {
+                        rc.spawn(loc);
+                        break;
+                    }
                 }
-                queueSpawns.remove(loc);
+            }
+            else {
+                List<MapLocation> queueSpawns = new ArrayList<MapLocation>(Arrays.asList(spawnLocs));
+                while (!queueSpawns.isEmpty()) {
+                    MapLocation loc = queueSpawns.get(rng.nextInt(queueSpawns.size()));
+                    if (rc.canSpawn(loc)) {
+                        rc.spawn(loc);
+                        break;
+                    }
+                    queueSpawns.remove(loc);
+                }
             }
         }
-
     }
 }
