@@ -13,7 +13,6 @@ public class Pathfind {
 
     private static HashSet<MapLocation> line = null;
     private static int obsStartDist = 0;
-    private static MapLocation obsStartLoc = null;
     private static MapLocation prevDest = null;
     private static int bugState = 0; // 0 = going to target, 1 = circling obstacle
     private static Direction bugDir = null;
@@ -89,6 +88,10 @@ public class Pathfind {
         if (bugState == 0) {
             bugDir = rc.getLocation().directionTo(loc);
             if (rc.canMove(bugDir)) rc.move(bugDir);
+            else if (rc.canFill(rc.getLocation().add(bugDir))) {
+                rc.fill(rc.getLocation().add(bugDir));
+                if (rc.canMove(bugDir)) rc.move(bugDir);
+            }
             else {
                 bugState = 1;
                 obsStartDist = rc.getLocation().distanceSquaredTo(loc);
@@ -103,8 +106,15 @@ public class Pathfind {
                 if (rc.canMove(bugDir)) {
                     rc.move(bugDir);
                     bugDir = bugDir.rotateRight();
-                    bugDir = bugDir.rotateRight();
                     break;
+                }
+                else if (rc.canFill(rc.getLocation().add(bugDir))) {
+                    rc.fill((rc.getLocation().add(bugDir)));
+                    if (rc.canMove(bugDir)) {
+                        rc.move(bugDir);
+                        bugDir = bugDir.rotateRight();
+                        break;
+                    }
                 }
                 else {
                     bugDir = bugDir.rotateLeft();

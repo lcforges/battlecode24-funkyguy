@@ -49,7 +49,6 @@ public strictfp class RobotPlayer {
                     int round = rc.getRoundNum();
                     if (round <= GameConstants.SETUP_ROUNDS) SetupPhase.runSetup(rc);
                     else MainPhase.runMainPhase(rc);
-                    updateEnemyRobots(rc);
                 }
                 else {
                     trySpawn(rc);
