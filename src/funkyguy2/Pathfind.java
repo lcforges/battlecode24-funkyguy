@@ -5,12 +5,22 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 
+import java.util.HashSet;
+import java.util.Map;
+
 public class Pathfind {
     static Direction direction;
-    int lefts;
-    int rights;
+
+    private static HashSet<MapLocation> line = null;
+    private static int obsStartDist = 0;
+    private static MapLocation obsStartLoc = null;
+    private static MapLocation prevDest = null;
+    private static int bugState = 0; // 0 = going to target, 1 = circling obstacle
+    private static Direction bugDir = null;
 
     public static void moveTowards(RobotController rc, MapLocation loc) throws GameActionException {
+        // bugNav
+//        bugNav(rc, loc);
         // moves towards location and fill in water along the way
         Direction dir = rc.getLocation().directionTo(loc);
 
@@ -18,7 +28,7 @@ public class Pathfind {
             rc.move(dir);
         }
         else if (rc.canFill(rc.getLocation().add(dir))) {
-                rc.fill(rc.getLocation().add(dir));
+            rc.fill(rc.getLocation().add(dir));
         }
         else if (!rc.sensePassability(rc.getLocation().add(dir))) {
             // Go around wall
@@ -66,5 +76,87 @@ public class Pathfind {
                 if (rc.canMove(direction)) rc.move(direction);
             }
         }
+    }
+
+    private static void bugNav(RobotController rc, MapLocation loc) throws GameActionException{
+        if (!loc.equals(prevDest)) {
+            prevDest = loc;
+            line = createLine(rc.getLocation(), loc);
+        }
+        for (MapLocation location : line) {
+            rc.setIndicatorDot(location, rc.getID()%255,rc.getID()%255, rc.getID()%255);
+        }
+        if (bugState == 0) {
+            bugDir = rc.getLocation().directionTo(loc);
+            if (rc.canMove(bugDir)) rc.move(bugDir);
+            else {
+                bugState = 1;
+                obsStartDist = rc.getLocation().distanceSquaredTo(loc);
+            }
+        }
+        else {
+            if (line.contains(rc.getLocation()) && rc.getLocation().distanceSquaredTo(loc) < obsStartDist) {
+                bugState = 0;
+            }
+
+            for (int i = 0; i < 8; i++) {
+                if (rc.canMove(bugDir)) {
+                    rc.move(bugDir);
+                    bugDir = bugDir.rotateRight();
+                    bugDir = bugDir.rotateRight();
+                    break;
+                }
+                else {
+                    bugDir = bugDir.rotateLeft();
+                }
+            }
+        }
+    }
+
+    public static void resetBug() throws GameActionException {
+        bugState = 0;
+        bugDir = null;
+        prevDest = null;
+        obsStartDist = 0;
+    }
+
+    public static HashSet<MapLocation> createLine(MapLocation a, MapLocation b) {
+        HashSet<MapLocation> locs = new HashSet<>();
+        int x = a.x;
+        int y = a.y;
+        int dx = b.x - a.x;
+        int dy = b.y - a.y;
+        int sx = (int) Math.signum(dx);
+        int sy = (int) Math.signum(dy);
+        dx = Math.abs(dx);
+        dy = Math.abs(dy);
+        int d = Math.max(dx, dy);
+        int r = d/2;
+        if (dx > dy) {
+            for (int i = 0; i < d; i++) {
+                locs.add(new MapLocation(x,y));
+                x += sx;
+                r += dy;
+                if (r >= dx) {
+                    locs.add(new MapLocation(x,y));
+                    y += sy;
+                    r -= dx;
+                }
+            }
+        }
+        else {
+            for (int i = 0; i < d; i++) {
+                locs.add(new MapLocation(x, y));
+                y += sy;
+                r += dx;
+                if (r >= dy) {
+                    locs.add(new MapLocation(x,y));
+                    x += sx;
+                    r -= dy;
+                }
+            }
+        }
+        locs.add(new MapLocation(x,y));
+        return locs;
     }
 }
