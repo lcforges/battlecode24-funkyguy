@@ -15,6 +15,7 @@ public strictfp class RobotPlayer {
     public static MapLocation mainSpawnLoc = null;
 
     public static int SETUP_SPAWN = 50;
+    public static int SETUP_ROUNDS = 150;
 
     public static final int MAX_HEALTH = 1000;
 
@@ -47,7 +48,7 @@ public strictfp class RobotPlayer {
             try {
                 if (rc.isSpawned()) {
                     int round = rc.getRoundNum();
-                    if (round <= GameConstants.SETUP_ROUNDS-50) SetupPhase.runSetup(rc);
+                    if (round <= SETUP_ROUNDS) SetupPhase.runSetup(rc);
                     else MainPhase.runMainPhase(rc);
                 }
                 else {
