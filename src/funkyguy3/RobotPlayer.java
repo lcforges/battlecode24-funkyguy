@@ -1,4 +1,4 @@
-package funkyguy2;
+package funkyguy3;
 
 import battlecode.common.*;
 
@@ -17,6 +17,12 @@ public strictfp class RobotPlayer {
     public static int SETUP_SPAWN = 50;
 
     public static final int MAX_HEALTH = 1000;
+    public static final int MIN_HEALTH = 80; // min health for robot to engage in combat
+    public static final int ATTACK_HEALTH = 300; // min health for an attacking robot to pursue
+
+    public static RobotInfo[] nearbyEnemies = null;
+    public static RobotInfo[] nearbyAllies = null;
+
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -47,7 +53,7 @@ public strictfp class RobotPlayer {
             try {
                 if (rc.isSpawned()) {
                     int round = rc.getRoundNum();
-                    if (round <= GameConstants.SETUP_ROUNDS-50) SetupPhase.runSetup(rc);
+                    if (round <= GameConstants.SETUP_ROUNDS) SetupPhase.runSetup(rc);
                     else MainPhase.runMainPhase(rc);
                 }
                 else {

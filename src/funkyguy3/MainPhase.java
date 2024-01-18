@@ -1,8 +1,12 @@
-package funkyguy2;
+package funkyguy3;
 
 import battlecode.common.*;
 
-import java.util.*;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.PriorityQueue;
 
 public class MainPhase {
 
@@ -12,13 +16,23 @@ public class MainPhase {
         if (rc.canBuyGlobal(GlobalUpgrade.HEALING)) rc.buyGlobal(GlobalUpgrade.HEALING);
         if (rc.canBuyGlobal(GlobalUpgrade.CAPTURING)) rc.buyGlobal(GlobalUpgrade.CAPTURING);
 
-
         if (!RobotPlayer.spawnDuck) {
-            attackEnemies(rc);
+            RobotPlayer.nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());;
+            RobotPlayer.nearbyAllies = rc.senseNearbyRobots(-1, rc.getTeam());
 
-            healAllies(rc);
+            if (RobotPlayer.nearbyEnemies.length > RobotPlayer.nearbyAllies.length) {
+                attackEnemies(rc);
+
+                healAllies(rc);
+            }
+            else {
+                healAllies(rc);
+
+                attackEnemies(rc);
+            }
 
             captureTheFlag(rc);
+
         }
         else {
             SetupPhase.trapSpawn(rc);
@@ -43,9 +57,9 @@ public class MainPhase {
             }
         }
         // heals flag holders and then weakest units
-        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
-        if (allies.length != 0) {
-            for (RobotInfo ally : allies) {
+
+        if (RobotPlayer.nearbyAllies.length != 0) {
+            for (RobotInfo ally : RobotPlayer.nearbyAllies) {
                 if (ally.hasFlag()){
                     if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
                     else {
@@ -55,7 +69,7 @@ public class MainPhase {
                 }
             }
             PriorityQueue<Tuple> healths = new PriorityQueue<>();
-            for (RobotInfo ally : allies) {
+            for (RobotInfo ally : RobotPlayer.nearbyAllies) {
                 healths.add(new Tuple(ally.getHealth(),ally));
             }
             MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
@@ -71,19 +85,29 @@ public class MainPhase {
 
     private static void attackEnemies(RobotController rc) throws GameActionException {
         // attack enemy robots with flags first
-        RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        for (RobotInfo robot: nearbyEnemies) {
+
+        for (RobotInfo robot: RobotPlayer.nearbyEnemies) {
             if (robot.hasFlag() && !rc.hasFlag()) {
                 Pathfind.moveTowards(rc, robot.getLocation());
                 if (rc.canAttack(robot.getLocation())) rc.attack(robot.getLocation());
             }
         }
-        for (RobotInfo robot: nearbyEnemies) {
-            if (!rc.hasFlag()) {
-                Pathfind.moveTowards(rc, robot.getLocation());
-            }
-            if (rc.canAttack(robot.getLocation()) && !rc.hasFlag()) {
-                rc.attack(robot.getLocation());
+        for (RobotInfo robot: RobotPlayer.nearbyEnemies) {
+            if (!rc.hasFlag()){
+                if (rc.getHealth() > RobotPlayer.MIN_HEALTH) {
+                    if (rc.getHealth() > RobotPlayer.ATTACK_HEALTH) {
+                        Pathfind.moveTowards(rc, robot.getLocation());
+                    }
+                    if (rc.canAttack(robot.getLocation()) && !rc.hasFlag()) {
+                        rc.attack(robot.getLocation());
+                    }
+                }
+                else {
+                    // run away
+                    Direction dir = rc.getLocation().directionTo(robot.getLocation()).opposite();
+                    Pathfind.moveTowards(rc, rc.getLocation().add(dir));
+                }
+
             }
         }
     }
