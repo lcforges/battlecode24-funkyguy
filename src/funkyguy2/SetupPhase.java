@@ -22,7 +22,7 @@ public class SetupPhase {
             if (target != null) {
                 int dist = rc.getLocation().distanceSquaredTo(target.getLocation());
                 if (dist == 0){
-                    RobotPlayer.mainSpawnLoc = rc.getLocation();
+                    RobotPlayer.mainSpawn = rc.senseMapInfo(rc.getLocation());
                     RobotPlayer.spawnDuck = true;
                 }
                 else {

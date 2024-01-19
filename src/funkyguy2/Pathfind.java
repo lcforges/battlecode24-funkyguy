@@ -6,6 +6,7 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 public class Pathfind {
@@ -62,7 +63,7 @@ public class Pathfind {
         if (rc.isMovementReady()) {
             if (direction != null) {
                 if (rc.canMove(direction)) rc.move(direction);
-                else if (rc.canFill(rc.getLocation().add(direction)) && RobotPlayer.rng.nextBoolean()) {
+                else if (rc.canFill(rc.getLocation().add(direction)) && RobotPlayer.rng.nextInt(20) == 0) {
                     rc.fill(rc.getLocation().add(direction));
                 }
                 else {
@@ -168,5 +169,18 @@ public class Pathfind {
         }
         locs.add(new MapLocation(x,y));
         return locs;
+    }
+
+    public static MapLocation findClosestLocation(MapLocation loc1, List<MapLocation> otherLocs) {
+        MapLocation closest = null;
+        int minDist = Integer.MAX_VALUE;
+        for (MapLocation loc2 : otherLocs) {
+            int dist = loc1.distanceSquaredTo(loc2);
+            if (dist < minDist) {
+                minDist = dist;
+                closest = loc2;
+            }
+        }
+        return closest;
     }
 }

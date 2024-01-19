@@ -12,8 +12,7 @@ public strictfp class RobotPlayer {
     public static Random rng = null;
 
     public static boolean spawnDuck = false;
-    public static MapLocation mainSpawnLoc = null;
-
+    public static MapInfo mainSpawn = null;
     public static int SETUP_SPAWN = 50;
     public static int SETUP_ROUNDS = 150;
 
@@ -87,9 +86,9 @@ public strictfp class RobotPlayer {
     }
 
     public static void trySpawn(RobotController rc) throws GameActionException{
-        if (spawnDuck && mainSpawnLoc != null){
-            if (rc.canSpawn(mainSpawnLoc)) {
-                rc.spawn(mainSpawnLoc);
+        if (spawnDuck && mainSpawn != null){
+            if (rc.canSpawn(mainSpawn.getMapLocation())) {
+                rc.spawn(mainSpawn.getMapLocation());
             }
         }
         else {

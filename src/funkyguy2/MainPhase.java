@@ -6,6 +6,9 @@ import java.util.*;
 
 public class MainPhase {
 
+    private static int BOMBING_THRESHOLD = 12; // #of nearby ducks to blow up
+    private static int STUNNING_THRESHOLD = 10;
+    private static int FLAG_DISTANCE = 2;
     public static void runMainPhase(RobotController rc) throws GameActionException {
         // ACTIONS
         if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
@@ -14,6 +17,11 @@ public class MainPhase {
 
 
         if (!RobotPlayer.spawnDuck) {
+            // get crumbs
+            MapLocation[] nearbyCrumbs = rc.senseNearbyCrumbs(1);
+            if (nearbyCrumbs.length != 0) {
+                Pathfind.moveTowards(rc, nearbyCrumbs[0]);
+            }
             attackEnemies(rc);
 
             healAllies(rc);
@@ -21,7 +29,10 @@ public class MainPhase {
             captureTheFlag(rc);
         }
         else {
-            SetupPhase.trapSpawn(rc);
+            // only tries to add more traps if nearby bread
+            if (rc.senseNearbyFlags(-1,rc.getTeam()).length != 0) {
+                SetupPhase.trapSpawn(rc);
+            }
         }
 
 
@@ -86,6 +97,37 @@ public class MainPhase {
                 rc.attack(robot.getLocation());
             }
         }
+        if (!rc.hasFlag()){
+            FlagInfo[] nearbyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
+            for (FlagInfo flag : nearbyFlags) {
+                if (flag.isPickedUp()) {
+                    // build occasional defensive traps near flags
+                    if (RobotPlayer.rng.nextInt(25) == 0){
+                        if (rc.canBuild(TrapType.STUN, rc.getLocation())){
+                            rc.build(TrapType.STUN, rc.getLocation());
+                        }
+                    }
+                }
+                else {
+                    MapLocation[] allySpawns = rc.getAllySpawnLocations();
+                    Direction dir = rc.getLocation().directionTo(allySpawns[RobotPlayer.rng.nextInt(allySpawns.length)]);
+                    if (rc.canBuild(TrapType.STUN, rc.getLocation().add(dir))) rc.build(TrapType.STUN, rc.getLocation().add(dir));
+                }
+            }
+            if (nearbyEnemies.length >= BOMBING_THRESHOLD){
+                if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+                    System.out.println("BOMBING");
+                    rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+                }
+            }
+            else if (nearbyEnemies.length >= STUNNING_THRESHOLD) {
+                if (rc.canBuild(TrapType.STUN, rc.getLocation())) {
+                    System.out.println("STUNNING");
+                    rc.build(TrapType.STUN, rc.getLocation());
+                }
+            }
+
+        }
     }
 
     private static void captureTheFlag(RobotController rc) throws GameActionException {
@@ -98,9 +140,11 @@ public class MainPhase {
                     flagLocs.add(flag.getLocation());
                 }
                 else {
-                    // follow picked up enemy flag x% of time
+                    // follow picked up enemy flag x% of time and far enough away
                     if (RobotPlayer.rng.nextInt(100) >= 30) {
-                        flagLocs.add(flag.getLocation());
+                        if (rc.getLocation().distanceSquaredTo(flag.getLocation()) > FLAG_DISTANCE) {
+                            flagLocs.add(flag.getLocation());
+                        }
                     }
                 }
             }
@@ -108,7 +152,7 @@ public class MainPhase {
                 MapLocation[] broadcastFlags = rc.senseBroadcastFlagLocations();
                 flagLocs.addAll(Arrays.asList(broadcastFlags));
             }
-            MapLocation closestFlag = findClosestLocation(rc.getLocation(), flagLocs);
+            MapLocation closestFlag = Pathfind.findClosestLocation(rc.getLocation(), flagLocs);
             if (closestFlag != null) {
                 if (rc.canPickupFlag(closestFlag)) {
                     rc.pickupFlag(closestFlag);
@@ -116,12 +160,6 @@ public class MainPhase {
                 else {
                     Pathfind.moveTowards(rc, closestFlag);
                     if (rc.canPickupFlag(closestFlag)) rc.pickupFlag(closestFlag);
-                }
-                // build occasional traps near flags
-                if (rc.getLocation().distanceSquaredTo(closestFlag) < 9 && RobotPlayer.rng.nextInt(25) == 0){
-                    if (rc.canBuild(TrapType.STUN, rc.getLocation())){
-                        rc.build(TrapType.STUN, rc.getLocation());
-                    }
                 }
             }
             else {
@@ -132,21 +170,10 @@ public class MainPhase {
         else {
             // move to closest ally spawn zone
             MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-            MapLocation closestSpawn = findClosestLocation(rc.getLocation(), Arrays.asList(spawnLocs));
+            MapLocation closestSpawn = Pathfind.findClosestLocation(rc.getLocation(), Arrays.asList(spawnLocs));
             Pathfind.moveTowards(rc, closestSpawn);
         }
     }
 
-    public static MapLocation findClosestLocation(MapLocation loc1, List<MapLocation> otherLocs) {
-        MapLocation closest = null;
-        int minDist = Integer.MAX_VALUE;
-        for (MapLocation loc2 : otherLocs) {
-            int dist = loc1.distanceSquaredTo(loc2);
-            if (dist < minDist) {
-                minDist = dist;
-                closest = loc2;
-            }
-        }
-        return closest;
-    }
+
 }
