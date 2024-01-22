@@ -15,6 +15,8 @@ public strictfp class RobotPlayer {
     public static MapInfo mainSpawn = null;
     public static int SETUP_SPAWN = 50;
     public static int SETUP_ROUNDS = 150;
+    public static MapLocation exploreLoc = null;
+    public static int EXPLORE_DIST;
 
     public static final int MAX_HEALTH = 1000;
 
@@ -43,6 +45,7 @@ public strictfp class RobotPlayer {
         if (rng == null) {
             rng = new Random(rc.getID());
         }
+        EXPLORE_DIST = (rc.getMapHeight() + rc.getMapWidth())/4;
         while (true) {
             try {
                 if (rc.isSpawned()) {

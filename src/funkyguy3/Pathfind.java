@@ -1,9 +1,6 @@
 package funkyguy3;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +23,8 @@ public class Pathfind {
         if (rc.canMove(dir)) {
             rc.move(dir);
         }
-        else if (rc.canFill(rc.getLocation().add(dir))) {
+        //fills water with x% chance
+        else if (rc.canFill(rc.getLocation().add(dir)) && RobotPlayer.rng.nextInt(25) == 0) {
             rc.fill(rc.getLocation().add(dir));
         }
         else if (!rc.sensePassability(rc.getLocation().add(dir))) {
@@ -60,21 +58,26 @@ public class Pathfind {
             moveTowards(rc, nearbyCrumbs[0]);
         }
         if (rc.isMovementReady()) {
-            if (direction != null) {
-                if (rc.canMove(direction)) rc.move(direction);
-                else if (rc.canFill(rc.getLocation().add(direction)) && RobotPlayer.rng.nextInt(20) == 0) {
-                    rc.fill(rc.getLocation().add(direction));
-                }
-                else {
-                    direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
-                    if (rc.canMove(direction)) rc.move(direction);
-                }
+            // pathfind to random location
+            if (RobotPlayer.exploreLoc == null) {
+                RobotPlayer.exploreLoc = getRandomLocation(rc);
             }
             else {
-                direction = Direction.allDirections()[RobotPlayer.rng.nextInt(8)];
-                if (rc.canMove(direction)) rc.move(direction);
+                if (rc.getLocation().distanceSquaredTo(RobotPlayer.exploreLoc) < 4){
+                    RobotPlayer.exploreLoc = getRandomLocation(rc);
+                }
+                moveTowards(rc, RobotPlayer.exploreLoc);
             }
         }
+    }
+    private static MapLocation getRandomLocation(RobotController rc) throws GameActionException {
+        MapLocation cur = rc.getLocation();
+        int px = Math.min(cur.x + RobotPlayer.rng.nextInt(RobotPlayer.EXPLORE_DIST), rc.getMapWidth()-1);
+        int py = Math.min(cur.y + RobotPlayer.rng.nextInt(RobotPlayer.EXPLORE_DIST), rc.getMapHeight()-1);
+        int nx = Math.max(cur.x - RobotPlayer.rng.nextInt(RobotPlayer.EXPLORE_DIST), 0);
+        int ny = Math.max(cur.y - RobotPlayer.rng.nextInt(RobotPlayer.EXPLORE_DIST), 0);
+        MapLocation[] locs = new MapLocation[]{new MapLocation(px, py), new MapLocation(px, ny), new MapLocation(nx, py), new MapLocation(nx, ny)};
+        return locs[RobotPlayer.rng.nextInt(4)];
     }
 
     private static void bugNav(RobotController rc, MapLocation loc) throws GameActionException{
@@ -181,5 +184,19 @@ public class Pathfind {
             }
         }
         return closest;
+    }
+
+    public static RobotInfo findClosestRobot(MapLocation loc1, RobotInfo[] robots) {
+        int minDist = Integer.MAX_VALUE;
+        RobotInfo closestRobot = null;
+        for (RobotInfo robot : robots) {
+            MapLocation loc2 = robot.getLocation();
+            int dist = loc1.distanceSquaredTo(loc2);
+            if (dist < minDist) {
+                minDist = dist;
+                closestRobot = robot;
+            }
+        }
+        return closestRobot;
     }
 }
