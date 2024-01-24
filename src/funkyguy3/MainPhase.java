@@ -11,6 +11,13 @@ public class MainPhase {
     private static int BOMBING_THRESHOLD = 12; // #of nearby ducks to blow up
     private static int STUNNING_THRESHOLD = 10;
     private static int FLAG_DISTANCE = 2;
+    private static final int INF = 1000000000;
+    public static FlagInfo[] nearbyAllyFlags = null;
+    public static FlagInfo[] nearbyEnemyFlags = null;
+    public static RobotInfo[] nearbyAllies = null;
+    public static RobotInfo[] nearbyEnemies = null;
+    public static MapLocation[] broadcastFlags = null;
+
     public static void runMainPhase(RobotController rc) throws GameActionException {
         // ACTIONS
         if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
@@ -24,11 +31,17 @@ public class MainPhase {
             if (nearbyCrumbs.length != 0) {
                 Pathfind.moveTowards(rc, nearbyCrumbs[0]);
             }
-            attackEnemies(rc);
-
-            healAllies(rc);
-
-            captureTheFlag(rc);
+            nearbyAllyFlags = rc.senseNearbyFlags(-1, rc.getTeam());
+            nearbyEnemyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
+            nearbyAllies = rc.senseNearbyRobots(-1, rc.getTeam());
+            nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+            broadcastFlags = rc.senseBroadcastFlagLocations();
+            nextMove(rc);
+//            attackEnemies(rc);
+//
+//            healAllies(rc);
+//
+//            captureTheFlag(rc);
         }
         else {
             // only tries to add more traps if nearby bread
@@ -177,5 +190,68 @@ public class MainPhase {
         }
     }
 
+    private static float moveHeuristic(RobotController rc, Direction direction) throws GameActionException {
+        float res = 0;
+        float cAlly = -0.5f;
+        float cAllyFlagHolder = -10;
+        float cEnemy = 0.5f;
+        float cEnemyFlagHolder = -10;
+        float cNearbyAllyFlags = -10;
+        float cNearbyEnemyFlags = -100;
+        float cBroadcastFlags = -10;
+        MapLocation center = rc.getLocation().add(direction);
+        if (!isLocOnMap(rc, center) || rc.senseMapInfo(center).isWall()) {
+            return -INF;
+        }
 
+        // go towards flag holders
+        // go towards nearby allies
+        // go away from nearby enemies
+        for (RobotInfo ally: nearbyAllies) {
+            if (ally.hasFlag()) {
+                res += cAllyFlagHolder*center.distanceSquaredTo(ally.getLocation());
+            }
+            else {
+                res += cAlly*center.distanceSquaredTo(ally.getLocation());
+            }
+        }
+        for (RobotInfo enemy: nearbyEnemies) {
+            if (enemy.hasFlag()) {
+                res += cEnemyFlagHolder*center.distanceSquaredTo(enemy.getLocation());
+            }
+            else {
+                res += cEnemy*center.distanceSquaredTo(enemy.getLocation());
+            }
+        }
+        for (FlagInfo flag : nearbyEnemyFlags) {
+            res += cNearbyEnemyFlags*center.distanceSquaredTo(flag.getLocation());
+        }
+        for (FlagInfo flag : nearbyAllyFlags) {
+            res += cNearbyAllyFlags*center.distanceSquaredTo(flag.getLocation());
+        }
+        for (MapLocation flagLoc : broadcastFlags) {
+            res += cBroadcastFlags*center.distanceSquaredTo(flagLoc);
+        }
+
+        return res;
+    }
+
+    private static void nextMove(RobotController rc) throws GameActionException  {
+        float maxHeuristic = -INF;
+        Direction maxDirection = null;
+        for (Direction dir : RobotPlayer.directions) {
+            float newHeuristic = moveHeuristic(rc, dir);
+            if (Float.compare(newHeuristic,maxHeuristic) > 0) {
+                maxDirection = dir;
+                maxHeuristic = newHeuristic;
+            }
+        }
+        if (maxDirection != null) {
+            Pathfind.moveTowards(rc, rc.getLocation().add(maxDirection));
+        }
+    }
+
+    private static Boolean isLocOnMap(RobotController rc, MapLocation loc) throws GameActionException{
+        return loc.x >= 0 && loc.y >= 0 && loc.x < rc.getMapWidth() && loc.y < rc.getMapHeight();
+    }
 }

@@ -63,11 +63,11 @@ public class Pathfind {
                 RobotPlayer.exploreLoc = getRandomLocation(rc);
             }
             else {
-                if (rc.getLocation().distanceSquaredTo(RobotPlayer.exploreLoc) < 4){
+                if (rc.getLocation().distanceSquaredTo(RobotPlayer.exploreLoc) <= 9){
                     RobotPlayer.exploreLoc = getRandomLocation(rc);
                 }
-                moveTowards(rc, RobotPlayer.exploreLoc);
             }
+            moveTowards(rc, RobotPlayer.exploreLoc);
         }
     }
     private static MapLocation getRandomLocation(RobotController rc) throws GameActionException {
