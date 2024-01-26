@@ -30,8 +30,9 @@ public class MainPhase {
 
     public static int ATTACK_AMT = 150;
     public static float STUN_ATTACK_CHANCE = 0.3f;
+    public static int debug = 0;
 
-    public static String[] actions = new String[]{"heal", "attack", "stun", "bomb", "none"};
+    public static String[] actions = new String[]{"heal", "attack", "stun", "bomb", "flag", "none"};
 
     public static void runMainPhase(RobotController rc) throws GameActionException {
         // ACTIONS
@@ -88,21 +89,20 @@ public class MainPhase {
             }
         }
         // heals flag holders and then weakest units
-        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
-        if (allies.length != 0) {
-            for (RobotInfo ally : allies) {
-                if (ally.hasFlag()){
-                    if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
-                    else {
-                        Pathfind.moveTowards(rc, ally.getLocation());
-                        if (rc.canHeal(ally.getLocation())) rc.heal(ally.getLocation());
-                    }
+        for (int i = nearbyAllies.length - 1; i > 0; i--) {
+            if (nearbyAllies[i].hasFlag()){
+                if (rc.canHeal(nearbyAllies[i].getLocation())) rc.heal(nearbyAllies[i].getLocation());
+                else {
+                    Pathfind.moveTowards(rc, nearbyAllies[i].getLocation());
+                    if (rc.canHeal(nearbyAllies[i].getLocation())) rc.heal(nearbyAllies[i].getLocation());
                 }
             }
-            PriorityQueue<Tuple> healths = new PriorityQueue<>();
-            for (RobotInfo ally : allies) {
-                healths.add(new Tuple(ally.getHealth(),ally));
-            }
+        }
+        PriorityQueue<Tuple> healths = new PriorityQueue<>();
+        for (int i = nearbyAllies.length - 1; i > 0; i--) {
+            healths.add(new Tuple(nearbyAllies[i].getHealth(), nearbyAllies[i]));
+        }
+        if (!healths.isEmpty()) {
             MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
             if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
             else {
@@ -117,14 +117,14 @@ public class MainPhase {
     private static void attackEnemies(RobotController rc) throws GameActionException {
         // attack enemy robots with flags first
         RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        for (RobotInfo robot: nearbyEnemies) {
-            if (robot.hasFlag() && !rc.hasFlag()) {
-                if (rc.canAttack(robot.getLocation())) rc.attack(robot.getLocation());
+        for (int i = nearbyEnemies.length - 1; i > 0; i--) {
+            if (nearbyEnemies[i].hasFlag() && !rc.hasFlag()) {
+                if (rc.canAttack(nearbyEnemies[i].getLocation())) rc.attack(nearbyEnemies[i].getLocation());
             }
         }
-        for (RobotInfo robot: nearbyEnemies) {
-            if (rc.canAttack(robot.getLocation()) && !rc.hasFlag()) {
-                rc.attack(robot.getLocation());
+        for (int i = nearbyEnemies.length - 1; i > 0; i--) {
+            if (rc.canAttack(nearbyEnemies[i].getLocation()) && !rc.hasFlag()) {
+                rc.attack(nearbyEnemies[i].getLocation());
             }
         }
 
@@ -179,34 +179,37 @@ public class MainPhase {
         float res = 0;
         float cAlly = -0.5f;
         float cAllyFlagHolder = -10;
-        float cEnemy = 0.5f;
+        float cEnemy = -1;
         float cEnemyFlagHolder = -10;
         float cNearbyAllyFlags = -10;
         float cNearbyEnemyFlags = -100;
-        float cBroadcastFlags = -10;
+        float cBroadcastFlags = 0;
         float cFlagHolder = -100;
+        float cAllyHealth = 10;
+        float cEnemyHealth = -10;
         MapLocation center = rc.getLocation().add(direction);
         if (!isLocOnMap(rc, center) || rc.senseMapInfo(center).isWall()) {
             return -INF;
         }
 
-        // go towards flag holders
-        // go towards nearby allies
-        // go away from nearby enemies
-        for (RobotInfo ally: nearbyAllies) {
-            if (ally.hasFlag()) {
-                res += cAllyFlagHolder*center.distanceSquaredTo(ally.getLocation());
+        for (int i = nearbyAllies.length - 1; i > 0; i--) {
+            if (nearbyAllies[i].hasFlag()) {
+                res += cAllyFlagHolder*center.distanceSquaredTo(nearbyAllies[i].getLocation());
+                res += (cAllyFlagHolder+cAllyHealth)*nearbyAllies[i].getHealth();
             }
             else {
-                res += cAlly*center.distanceSquaredTo(ally.getLocation());
+                res += cAlly*center.distanceSquaredTo(nearbyAllies[i].getLocation());
+                res += cAllyHealth*nearbyAllies[i].getHealth();
             }
         }
-        for (RobotInfo enemy: nearbyEnemies) {
-            if (enemy.hasFlag()) {
-                res += cEnemyFlagHolder*center.distanceSquaredTo(enemy.getLocation());
+        for (int i = nearbyEnemies.length - 1; i > 0; i--){
+            if (nearbyEnemies[i].hasFlag()) {
+                res += cEnemyFlagHolder*center.distanceSquaredTo(nearbyEnemies[i].getLocation());
+                res += (cEnemyFlagHolder+cEnemyHealth)*nearbyEnemies[i].getHealth();
             }
             else {
-                res += cEnemy*center.distanceSquaredTo(enemy.getLocation());
+                res += cEnemy*center.distanceSquaredTo(nearbyEnemies[i].getLocation());
+                res += cEnemyHealth*nearbyEnemies[i].getHealth();
             }
         }
         if (rc.hasFlag()) {
@@ -214,12 +217,12 @@ public class MainPhase {
             res += cFlagHolder*center.distanceSquaredTo(Pathfind.findClosestLocation(center, Arrays.asList(spawnLocs)));
         }
         else {
-            for (FlagInfo flag : nearbyEnemyFlags) {
-                res += cNearbyEnemyFlags*center.distanceSquaredTo(flag.getLocation());
+            for (int i = nearbyEnemyFlags.length - 1; i > 0; i--) {
+                res += cNearbyEnemyFlags*center.distanceSquaredTo(nearbyEnemyFlags[i].getLocation());
             }
             if (nearbyEnemyFlags.length == 0) {
-                for (MapLocation flagLoc : broadcastFlags) {
-                    res += cBroadcastFlags*center.distanceSquaredTo(flagLoc);
+                for (int i = broadcastFlags.length - 1; i > 0; i--) {
+                    res += cBroadcastFlags*center.distanceSquaredTo(broadcastFlags[i]);
                 }
             }
         }
@@ -233,67 +236,95 @@ public class MainPhase {
     private static void nextMove(RobotController rc) throws GameActionException  {
         float maxHeuristic = -INF;
         Direction maxDirection = null;
-        for (Direction dir : RobotPlayer.directions) {
-            float newHeuristic = moveHeuristic(rc, dir);
+        for (int i = RobotPlayer.directions.length - 1; i > 0; i--) {
+            float newHeuristic = moveHeuristic(rc, RobotPlayer.directions[i]);
             if (Float.compare(newHeuristic, maxHeuristic) > 0) {
-                maxDirection = dir;
+                maxDirection = RobotPlayer.directions[i];
                 maxHeuristic = newHeuristic;
             }
         }
         if (maxDirection != null) {
             Pathfind.moveTowards(rc, rc.getLocation().add(maxDirection));
         }
+//        if (debug < 2) {
+//            debug++;
+//            System.out.println(maxDirection + ": " + maxHeuristic);
+//        }
     }
 
     private static float actionHeuristic(RobotController rc, String action) {
         float res = 0;
         float cCooldown = 1;
-        float cCrumbs = 1;
-        float cEnemyHealth = -5;
-        float cAllyHealth = 10;
+        float cCrumbs = 500;
+        float cEnemyHealth = -500;
+        float cAllyHealth = 100;
+        float cAttack = 100000;
+        float cHeal = 5000;
+        float cBuild = 100;
+        int attack = rc.getExperience(SkillType.ATTACK);
+        int build = rc.getExperience(SkillType.BUILD);
+        int heal = rc.getExperience(SkillType.HEAL);
         float allyHealth = 0;
         float enemyHealth = 0;
+        float flagReward = 100000;
         int hCrumbs = crumbs;
-        for (RobotInfo ally : nearbyAllies) {
-            allyHealth += ally.getHealth();
+        for (int i = nearbyAllies.length - 1; i > 0; i--) {
+            allyHealth += nearbyAllies[i].getHealth();
         }
-        for (RobotInfo enemy : nearbyEnemies) {
-            enemyHealth += enemy.getHealth();
+        for (int i = nearbyEnemies.length - 1; i > 0; i--) {
+            enemyHealth += nearbyEnemies[i].getHealth();
         }
         switch (action) {
             case "heal":
-                res += cCooldown*(rc.getActionCooldownTurns() + GameConstants.HEAL_COOLDOWN - GameConstants.COOLDOWNS_PER_TURN);
-                allyHealth += HEAL_AMT;
+                if (nearbyAllies.length != 0) {
+                    res += cCooldown*(rc.getActionCooldownTurns() + GameConstants.HEAL_COOLDOWN);
+                    allyHealth += HEAL_AMT;
+                    heal += 1;
+                }
             case "attack":
-                res += cCooldown*(rc.getActionCooldownTurns() + GameConstants.ATTACK_COOLDOWN - GameConstants.COOLDOWNS_PER_TURN);
-                enemyHealth -= ATTACK_AMT;
+                if (nearbyEnemies.length != 0) {
+                    res += cCooldown*(rc.getActionCooldownTurns() + GameConstants.ATTACK_COOLDOWN);
+                    enemyHealth -= ATTACK_AMT;
+                    attack += 1;
+                }
             case "stun":
-                res += cCooldown*(rc.getActionCooldownTurns() + TRAP_COOLDOWN - GameConstants.COOLDOWNS_PER_TURN);
+                res += cCooldown*(rc.getActionCooldownTurns() + TRAP_COOLDOWN);
                 hCrumbs -= STUN_COST;
                 // ~%chance of activation * estimated number of enemies stunned * x% chance of getting attacked while stunned * attack damage;
                 enemyHealth -= (float) (nearbyEnemies.length/VISION_AREA)*((float) (nearbyEnemies.length/VISION_AREA)*STUN_AREA) * STUN_ATTACK_CHANCE * ATTACK_AMT;
+                build += 1;
             case "bomb":
                 res += cCooldown*(rc.getActionCooldownTurns() + TRAP_COOLDOWN - GameConstants.COOLDOWNS_PER_TURN);
                 // %chance of activation * estimated # of enemies it will hit * damage
                 enemyHealth -= (float) (nearbyEnemies.length/VISION_AREA)*((float) (nearbyEnemies.length/VISION_AREA)*BOMB_AREA)*BOMB_DMG;
                 hCrumbs -= BOMB_COST;
+                build += 1;
+            case "flag":
+                if (rc.canPickupFlag(rc.getLocation())) {
+                    res += flagReward;
+                }
             case "none":
-                res += cCooldown*(rc.getActionCooldownTurns() - GameConstants.COOLDOWNS_PER_TURN);
+                res += cCooldown*(rc.getActionCooldownTurns());
         }
         res += cCrumbs*hCrumbs + cEnemyHealth*enemyHealth + cAllyHealth*allyHealth;
+        res += cAttack*attack + cBuild*cBuild + cHeal*heal;
         return res;
     }
 
     private static void nextAction(RobotController rc) throws GameActionException{
         float maxHeuristic = -INF;
         String bestAction = "";
-        for (String action : actions) {
-            float newHeuristic = actionHeuristic(rc, action);
+        for (int i = actions.length-1; i > 0; i--) {
+            float newHeuristic = actionHeuristic(rc, actions[i]);
             if (Float.compare(newHeuristic, maxHeuristic) > 0) {
                 maxHeuristic = newHeuristic;
-                bestAction = action;
+                bestAction = actions[i];
             }
         }
+//        if (debug < 2) {
+//            debug++;
+//            System.out.println(bestAction + ": " + maxHeuristic);
+//        }
         switch (bestAction) {
             case "attack":
                 attackEnemies(rc);
@@ -323,6 +354,8 @@ public class MainPhase {
     }
 
     private static void getFlag(RobotController rc) throws GameActionException {
-
+        if (rc.canPickupFlag(rc.getLocation())) {
+            rc.pickupFlag(rc.getLocation());
+        }
     }
 }

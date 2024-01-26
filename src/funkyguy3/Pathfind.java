@@ -176,27 +176,14 @@ public class Pathfind {
     public static MapLocation findClosestLocation(MapLocation loc1, List<MapLocation> otherLocs) {
         MapLocation closest = null;
         int minDist = Integer.MAX_VALUE;
-        for (MapLocation loc2 : otherLocs) {
-            int dist = loc1.distanceSquaredTo(loc2);
+        for (int i = otherLocs.size() - 1; i > 0; i--){
+            int dist = loc1.distanceSquaredTo(otherLocs.get(i));
             if (dist < minDist) {
                 minDist = dist;
-                closest = loc2;
+                closest = otherLocs.get(i);
             }
         }
         return closest;
     }
 
-    public static RobotInfo findClosestRobot(MapLocation loc1, RobotInfo[] robots) {
-        int minDist = Integer.MAX_VALUE;
-        RobotInfo closestRobot = null;
-        for (RobotInfo robot : robots) {
-            MapLocation loc2 = robot.getLocation();
-            int dist = loc1.distanceSquaredTo(loc2);
-            if (dist < minDist) {
-                minDist = dist;
-                closestRobot = robot;
-            }
-        }
-        return closestRobot;
-    }
 }
