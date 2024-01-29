@@ -1,4 +1,4 @@
-package funkyguy2;
+package funkyguy2v_1;
 
 import battlecode.common.*;
 
@@ -17,6 +17,8 @@ public strictfp class RobotPlayer {
     public static int SETUP_ROUNDS = 150;
 
     public static final int MAX_HEALTH = 1000;
+    public static int EXPLORE_DIST;
+
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -43,6 +45,7 @@ public strictfp class RobotPlayer {
         if (rng == null) {
             rng = new Random(rc.getID());
         }
+        EXPLORE_DIST = (rc.getMapHeight() + rc.getMapWidth())/4;
         while (true) {
             try {
                 if (rc.isSpawned()) {

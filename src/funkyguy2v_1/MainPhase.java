@@ -1,4 +1,4 @@
-package funkyguy2;
+package funkyguy2v_1;
 
 import battlecode.common.*;
 
@@ -8,7 +8,7 @@ public class MainPhase {
 
     private static int BOMBING_THRESHOLD = 12; // #of nearby ducks to blow up
     private static int STUNNING_THRESHOLD = 10;
-    private static int FLAG_DISTANCE = 2;
+    private static int FLAG_DISTANCE = 4;
     public static void runMainPhase(RobotController rc) throws GameActionException {
         // ACTIONS
         if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
@@ -22,9 +22,11 @@ public class MainPhase {
             if (nearbyCrumbs.length != 0) {
                 Pathfind.moveTowards(rc, nearbyCrumbs[0]);
             }
-            attackEnemies(rc);
+            if (!rc.hasFlag()) {
+                attackEnemies(rc);
 
-            healAllies(rc);
+                healAllies(rc);
+            }
 
             captureTheFlag(rc);
         }
@@ -81,53 +83,75 @@ public class MainPhase {
     }
 
     private static void attackEnemies(RobotController rc) throws GameActionException {
-        // attack enemy robots with flags first
-        RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        for (RobotInfo robot: nearbyEnemies) {
-            if (robot.hasFlag() && !rc.hasFlag()) {
-                Pathfind.moveTowards(rc, robot.getLocation());
-                if (rc.canAttack(robot.getLocation())) rc.attack(robot.getLocation());
-            }
-        }
-        for (RobotInfo robot: nearbyEnemies) {
-            if (!rc.hasFlag()) {
-                Pathfind.moveTowards(rc, robot.getLocation());
-            }
-            if (rc.canAttack(robot.getLocation()) && !rc.hasFlag()) {
-                rc.attack(robot.getLocation());
-            }
-        }
-        if (!rc.hasFlag()){
-            FlagInfo[] nearbyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
-            for (FlagInfo flag : nearbyFlags) {
-                if (flag.isPickedUp()) {
-                    // build occasional defensive traps near flags
-                    if (RobotPlayer.rng.nextInt(25) == 0){
-                        if (rc.canBuild(TrapType.STUN, rc.getLocation())){
-                            rc.build(TrapType.STUN, rc.getLocation());
-                        }
-                    }
-                }
-                else {
-                    MapLocation[] allySpawns = rc.getAllySpawnLocations();
-                    Direction dir = rc.getLocation().directionTo(allySpawns[RobotPlayer.rng.nextInt(allySpawns.length)]);
-                    if (rc.canBuild(TrapType.STUN, rc.getLocation().add(dir))) rc.build(TrapType.STUN, rc.getLocation().add(dir));
-                }
-            }
-            if (nearbyEnemies.length >= BOMBING_THRESHOLD){
-                if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                    System.out.println("BOMBING");
-                    rc.build(TrapType.EXPLOSIVE, rc.getLocation());
-                }
-            }
-            else if (nearbyEnemies.length >= STUNNING_THRESHOLD) {
-                if (rc.canBuild(TrapType.STUN, rc.getLocation())) {
-                    System.out.println("STUNNING");
-                    rc.build(TrapType.STUN, rc.getLocation());
-                }
+        class Tuple implements Comparable<Tuple> {
+            final int health;
+            final RobotInfo robot;
+
+            public Tuple(int health, RobotInfo robot) throws GameActionException {
+                this.health = health;
+                this.robot = robot;
             }
 
+            @Override
+            public int compareTo(Tuple tup) {
+                return this.health - tup.health;
+            }
         }
+        RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        if (enemies.length != 0) {
+            for (RobotInfo enemy : enemies) {
+                if (enemy.hasFlag()){
+                    if (rc.canAttack(enemy.getLocation())) rc.attack(enemy.getLocation());
+                    else {
+                        Pathfind.moveTowards(rc, enemy.getLocation());
+                        if (rc.canAttack(enemy.getLocation())) rc.attack(enemy.getLocation());
+                    }
+                }
+            }
+            PriorityQueue<Tuple> healths = new PriorityQueue<>();
+            for (RobotInfo enemy : enemies) {
+                healths.add(new Tuple(enemy.getHealth(),enemy));
+            }
+            MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
+            if (rc.canAttack(lowestHealthLoc)) rc.attack(lowestHealthLoc);
+            else {
+                while (!healths.isEmpty()){
+                    lowestHealthLoc = healths.remove().robot.getLocation();
+                    if (rc.canAttack(lowestHealthLoc)) rc.attack(lowestHealthLoc);
+                }
+            }
+        }
+        FlagInfo[] nearbyFlags = rc.senseNearbyFlags(-1, rc.getTeam().opponent());
+        for (FlagInfo flag : nearbyFlags) {
+            if (flag.isPickedUp()) {
+                // build occasional defensive traps near captured flags
+                if (RobotPlayer.rng.nextInt(25) == 0){
+                    if (rc.canBuild(TrapType.STUN, rc.getLocation())){
+                        rc.build(TrapType.STUN, rc.getLocation());
+                    }
+                }
+            }
+            // stun trap opponenet spawn
+            else {
+                MapLocation[] allySpawns = rc.getAllySpawnLocations();
+                Direction dir = rc.getLocation().directionTo(allySpawns[RobotPlayer.rng.nextInt(allySpawns.length)]);
+                if (rc.canBuild(TrapType.STUN, rc.getLocation().add(dir))) rc.build(TrapType.STUN, rc.getLocation().add(dir));
+            }
+        }
+        if (enemies.length >= BOMBING_THRESHOLD){
+            if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
+                System.out.println("BOMBING");
+                rc.build(TrapType.EXPLOSIVE, rc.getLocation());
+            }
+        }
+        else if (enemies.length >= STUNNING_THRESHOLD) {
+            if (rc.canBuild(TrapType.STUN, rc.getLocation())) {
+                System.out.println("STUNNING");
+                rc.build(TrapType.STUN, rc.getLocation());
+            }
+        }
+
+
     }
 
     private static void captureTheFlag(RobotController rc) throws GameActionException {
@@ -140,11 +164,9 @@ public class MainPhase {
                     flagLocs.add(flag.getLocation());
                 }
                 else {
-                    // follow picked up enemy flag x% of time and far enough away
-                    if (RobotPlayer.rng.nextInt(100) >= 30) {
-                        if (rc.getLocation().distanceSquaredTo(flag.getLocation()) > FLAG_DISTANCE) {
-                            flagLocs.add(flag.getLocation());
-                        }
+                    // follow picked up enemy flag if far enough away
+                    if (rc.getLocation().distanceSquaredTo(flag.getLocation()) > FLAG_DISTANCE) {
+                        flagLocs.add(flag.getLocation());
                     }
                 }
             }

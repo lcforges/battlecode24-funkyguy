@@ -1,4 +1,4 @@
-package funkyguy2;
+package funkyguy2v_0;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;

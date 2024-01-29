@@ -1,4 +1,4 @@
-package funkyguy2;
+package funkyguy2v_1;
 
 import battlecode.common.*;
 
