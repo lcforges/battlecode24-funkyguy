@@ -176,7 +176,7 @@ public class Pathfind {
     public static MapLocation findClosestLocation(MapLocation loc1, List<MapLocation> otherLocs) {
         MapLocation closest = null;
         int minDist = Integer.MAX_VALUE;
-        for (int i = otherLocs.size() - 1; i > 0; i--){
+        for (int i = otherLocs.size() - 1; i >= 0; i--){
             int dist = loc1.distanceSquaredTo(otherLocs.get(i));
             if (dist < minDist) {
                 minDist = dist;
