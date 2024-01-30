@@ -157,7 +157,11 @@ public class MainPhase {
             }
             while (!healths.isEmpty()) {
                 MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
-                if (rc.canAttack(lowestHealthLoc)) rc.attack(lowestHealthLoc);
+                if (rc.canAttack(lowestHealthLoc)) {
+                    rc.attack(lowestHealthLoc);
+                    Direction dir = rc.getLocation().directionTo(lowestHealthLoc).opposite();
+                    Pathfind.moveTowards(rc, rc.getLocation().add(dir));
+                }
                 else {
                     Pathfind.moveTowards(rc, lowestHealthLoc);
                     if (rc.canAttack(lowestHealthLoc)) rc.attack(lowestHealthLoc);

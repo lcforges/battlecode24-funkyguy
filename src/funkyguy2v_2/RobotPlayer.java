@@ -140,6 +140,21 @@ public strictfp class RobotPlayer {
                 queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(4)))));
                 queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(7)))));
             }
+            else if (z >= y && y >= x) {
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(10)))));
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(7)))));
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(4)))));
+            }
+            else if (x >= z && z >= y) {
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(4)))));
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(10)))));
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(7)))));
+            }
+            else if (y >= z && z >= x) {
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(7)))));
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(10)))));
+                queueSpawns.addAll(getSpawnLocs((Communication.intToLocation(rc, rc.readSharedArray(4)))));
+            }
             if (rng.nextInt(3) == 0) {
                 while (!queueSpawns.isEmpty()) {
                     MapLocation loc = queueSpawns.get(0);
