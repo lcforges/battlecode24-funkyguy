@@ -6,9 +6,12 @@ import java.util.*;
 
 public class MainPhase {
 
-    private static int BOMBING_THRESHOLD = 12; // #of nearby ducks to blow up
-    private static int STUNNING_THRESHOLD = 10;
+    private static int BOMBING_THRESHOLD = 200; // #of nearby ducks to blow up
+    private static int STUNNING_THRESHOLD = 6;
     private static int FLAG_DISTANCE = 4;
+    private static int SMALL_GROUP = 5;
+    private static int CRUMB_CAP = 1000;
+    private static int DEFENDERS = 3;
     public static void runMainPhase(RobotController rc) throws GameActionException {
         // ACTIONS
         if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) rc.buyGlobal(GlobalUpgrade.ACTION);
@@ -19,16 +22,37 @@ public class MainPhase {
         if (!RobotPlayer.spawnDuck) {
             // get crumbs
             MapLocation[] nearbyCrumbs = rc.senseNearbyCrumbs(1);
+            FlagInfo[] pickableFlags = rc.senseNearbyFlags(4, rc.getTeam().opponent());
+            FlagInfo[] allyFlags = rc.senseNearbyFlags(-1, rc.getTeam());
+
             if (nearbyCrumbs.length != 0) {
                 Pathfind.moveTowards(rc, nearbyCrumbs[0]);
             }
-            if (!rc.hasFlag()) {
-                attackEnemies(rc);
-
-                healAllies(rc);
+            for (FlagInfo flag : pickableFlags) {
+                if (!flag.isPickedUp()) {
+                    if (rc.canPickupFlag(flag.getLocation())) rc.pickupFlag(flag.getLocation());
+                }
             }
-
-            captureTheFlag(rc);
+            if (rc.hasFlag()) {
+                // move to closest ally spawn zone when holding flag
+                MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+                MapLocation closestSpawn = Pathfind.findClosestLocation(rc.getLocation(), Arrays.asList(spawnLocs));
+                Pathfind.moveTowards(rc, closestSpawn);
+            }
+            else {
+                if (allyFlags.length != 0){
+                    RobotInfo[] nearbyAllies = rc.senseNearbyRobots(-1, rc.getTeam());
+                    if (nearbyAllies.length < DEFENDERS) {
+                        Pathfind.moveTowards(rc, allyFlags[0].getLocation());
+                    }
+                }
+                attackEnemies(rc);
+                healAllies(rc);
+                RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+                if (nearbyEnemies.length <= SMALL_GROUP) {
+                    captureTheFlag(rc);
+                }
+            }
         }
         else {
             // only tries to add more traps if nearby bread
@@ -71,13 +95,10 @@ public class MainPhase {
             for (RobotInfo ally : allies) {
                 healths.add(new Tuple(ally.getHealth(),ally));
             }
-            MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
-            if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
-            else {
-                while (!healths.isEmpty()){
-                    lowestHealthLoc = healths.remove().robot.getLocation();
-                    if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
-                }
+
+            while (!healths.isEmpty()){
+                MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
+                if (rc.canHeal(lowestHealthLoc)) rc.heal(lowestHealthLoc);
             }
         }
     }
@@ -112,11 +133,11 @@ public class MainPhase {
             for (RobotInfo enemy : enemies) {
                 healths.add(new Tuple(enemy.getHealth(),enemy));
             }
-            MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
-            if (rc.canAttack(lowestHealthLoc)) rc.attack(lowestHealthLoc);
-            else {
-                while (!healths.isEmpty()){
-                    lowestHealthLoc = healths.remove().robot.getLocation();
+            while (!healths.isEmpty()) {
+                MapLocation lowestHealthLoc = healths.remove().robot.getLocation();
+                if (rc.canAttack(lowestHealthLoc)) rc.attack(lowestHealthLoc);
+                else {
+                    Pathfind.moveTowards(rc, lowestHealthLoc);
                     if (rc.canAttack(lowestHealthLoc)) rc.attack(lowestHealthLoc);
                 }
             }
@@ -131,22 +152,22 @@ public class MainPhase {
                     }
                 }
             }
-            // stun trap opponenet spawn
+            // stun trap opponent spawn
             else {
                 MapLocation[] allySpawns = rc.getAllySpawnLocations();
                 Direction dir = rc.getLocation().directionTo(allySpawns[RobotPlayer.rng.nextInt(allySpawns.length)]);
-                if (rc.canBuild(TrapType.STUN, rc.getLocation().add(dir))) rc.build(TrapType.STUN, rc.getLocation().add(dir));
+                if (rc.canBuild(TrapType.STUN, rc.getLocation().add(dir)) ) {
+                    rc.build(TrapType.STUN, rc.getLocation().add(dir));
+                }
             }
         }
         if (enemies.length >= BOMBING_THRESHOLD){
             if (rc.canBuild(TrapType.EXPLOSIVE, rc.getLocation())) {
-                System.out.println("BOMBING");
                 rc.build(TrapType.EXPLOSIVE, rc.getLocation());
             }
         }
         else if (enemies.length >= STUNNING_THRESHOLD) {
             if (rc.canBuild(TrapType.STUN, rc.getLocation())) {
-                System.out.println("STUNNING");
                 rc.build(TrapType.STUN, rc.getLocation());
             }
         }
@@ -155,7 +176,6 @@ public class MainPhase {
     }
 
     private static void captureTheFlag(RobotController rc) throws GameActionException {
-        if (!rc.hasFlag()) {
             // move towards closest flag
             ArrayList<MapLocation> flagLocs = new ArrayList<>();
             FlagInfo[] enemyFlags = rc.senseNearbyFlags(-1,rc.getTeam().opponent());
@@ -164,17 +184,26 @@ public class MainPhase {
                     flagLocs.add(flag.getLocation());
                 }
                 else {
-                    // follow picked up enemy flag if far enough away
+                    // follow picked up enemy flag if far enough away, otherwise move away
                     if (rc.getLocation().distanceSquaredTo(flag.getLocation()) > FLAG_DISTANCE) {
-                        flagLocs.add(flag.getLocation());
+                        Pathfind.moveTowards(rc, flag.getLocation());
+                    }
+                    else {
+                        Direction dir = rc.getLocation().directionTo(flag.getLocation()).opposite();
+                        Pathfind.moveTowards(rc, rc.getLocation().add(dir));
                     }
                 }
             }
+            boolean usingBroadcast = false;
             if (flagLocs.isEmpty()){
                 MapLocation[] broadcastFlags = rc.senseBroadcastFlagLocations();
                 flagLocs.addAll(Arrays.asList(broadcastFlags));
+                usingBroadcast = true;
             }
             MapLocation closestFlag = Pathfind.findClosestLocation(rc.getLocation(), flagLocs);
+//            if (usingBroadcast) {
+//                closestFlag = flagLocs.get(RobotPlayer.rng.nextInt(flagLocs.size()));
+//            }
             if (closestFlag != null) {
                 if (rc.canPickupFlag(closestFlag)) {
                     rc.pickupFlag(closestFlag);
@@ -188,13 +217,7 @@ public class MainPhase {
                 // explore randomly if no flags nearby
                 Pathfind.explore(rc);
             }
-        }
-        else {
-            // move to closest ally spawn zone
-            MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-            MapLocation closestSpawn = Pathfind.findClosestLocation(rc.getLocation(), Arrays.asList(spawnLocs));
-            Pathfind.moveTowards(rc, closestSpawn);
-        }
+
     }
 
 

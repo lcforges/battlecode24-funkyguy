@@ -18,6 +18,7 @@ public strictfp class RobotPlayer {
 
     public static final int MAX_HEALTH = 1000;
     public static int EXPLORE_DIST;
+    public static MapLocation exploreLoc = null;
 
 
     /** Array containing all the possible movement directions. */
@@ -54,7 +55,12 @@ public strictfp class RobotPlayer {
                     else MainPhase.runMainPhase(rc);
                 }
                 else {
-                    trySpawn(rc);
+//                    if (rc.readSharedArray(0) < 1){
+//                        if (rc.canWriteSharedArray(0,rc.readSharedArray(0)+1)){
+//                            rc.writeSharedArray(0,rc.readSharedArray(0)+1);
+//                        }
+                        trySpawn(rc);
+//                    }
                 }
 
             } catch (GameActionException e) {
